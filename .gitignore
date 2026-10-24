@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Skrivnosti in lokalne nastavitve
+.env
+
+# Urejevalnik
+.vscode/
+
+# Operacijski sistem
+Thumbs.db
+.DS_Store
