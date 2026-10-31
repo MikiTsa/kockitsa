@@ -43,13 +43,14 @@ Relacijska podatkovna baza PostgreSQL s štirimi tabelami, opisanimi v `03-podat
 
 ### Lokalni zagon
 
-Potrebna sta Docker Desktop in Python.
+Potrebni so Docker Desktop, Python in ključ za Brickset API. Podrobni ukazi so v `README.md`.
 
-1. `docker compose up -d` – zažene PostgreSQL in ob prvem zagonu ustvari tabele.
-2. `python -m venv .venv`, aktivacija okolja in `pip install -r requirements.txt` – namesti knjižnice backenda.
-3. `python seed/seed.py` – napolni katalog kompletov in ustvari administratorski račun.
-4. `uvicorn backend.main:app --reload` – zažene backend, ki streže tudi frontend.
-5. Rešitev je dostopna na naslovu `http://127.0.0.1:8000`.
+1. Kopiranje `.env.example` v `.env` in vpis vrednosti (geslo baze, ključ za Brickset API, administratorski račun).
+2. `docker compose up -d` – zažene PostgreSQL in ob prvem zagonu ustvari tabele.
+3. `python -m venv .venv`, aktivacija okolja in `pip install -r requirements.txt` – namesti knjižnice backenda.
+4. `python seed/seed.py` – napolni katalog kompletov iz Brickset API in ustvari administratorski račun.
+5. `uvicorn backend.main:app --reload` – zažene backend, ki streže tudi frontend.
+6. Rešitev je dostopna na naslovu `http://127.0.0.1:8000`.
 
 ## Tehnološki sklad
 
@@ -60,7 +61,7 @@ Potrebna sta Docker Desktop in Python.
 | Podatkovna baza | PostgreSQL |
 | Avtentikacija | E-pošta in geslo, zgoščevanje gesel s knjižnico bcrypt, seja v podpisanem piškotku (SessionMiddleware iz ogrodja Starlette, na katerem temelji FastAPI) |
 | Lokalni razvoj | Docker Desktop in Docker Compose (podatkovna baza), virtualno okolje Python (venv), Visual Studio Code, Git |
-| Drugo | Skripta v Pythonu za začetne podatke (katalog kompletov, administratorski račun) |
+| Drugo | Skripta v Pythonu za začetne podatke (katalog kompletov iz Brickset API, administratorski račun) |
 
 ## Arhitekturne odločitve
 
@@ -75,3 +76,4 @@ Vsaka odločitev je s kontekstom, obravnavanimi možnostmi in posledicami podrob
 - **Seja v podpisanem piškotku in bcrypt.** Rešitev ne potrebuje zunanje storitve za prijavo, gesla pa niso shranjena v berljivi obliki. Ker backend streže tudi frontend, sta oba na istem naslovu in piškotek deluje brez dodatnih nastavitev.
 - **Ena aktivna vloga na račun.** Preverjanje pravic je preprosto: končna točka primerja vlogo iz seje z zahtevano vlogo. Uporabnik, ki želi kupovati in prodajati, vlogo zamenja na profilu in ne potrebuje dveh računov.
 - **Pravila delovnega procesa v backendu.** Prehode med statusi oglasa in ujemanje oglasov z iskanji preverja backend, ker je zahtevke mogoče poslati tudi mimo frontenda.
+- **Katalog kompletov iz Brickset API.** Skripta za začetne podatke prenese resnične komplete, zato jih ni treba vpisovati ročno; za lokalni zagon je potreben brezplačen ključ za Brickset API.
