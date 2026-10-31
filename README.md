@@ -17,7 +17,42 @@ Vloge: kupec, prodajalec, administrator.
 
 - `frontend/` – strani HTML in JavaScript
 - `backend/` – aplikacija FastAPI
+- `db/` – shema podatkovne baze
+- `seed/` – skripta za začetne podatke (katalog kompletov iz Brickset API, administratorski račun)
 - `docs/` – projektna dokumentacija
+
+## Lokalni zagon
+
+Potrebni so Docker Desktop, Python 3.13 in brezplačen ključ za [Brickset API](https://brickset.com/tools/webservices/requestkey). Ukazi so za PowerShell in se izvedejo v korenu repozitorija.
+
+1. Kopirajte `.env.example` v `.env` in izpolnite vrednosti:
+   ```
+   copy .env.example .env
+   ```
+   - `POSTGRES_PASSWORD` – poljubno geslo podatkovne baze; isto geslo vpišite namesto `<geslo>` v `DATABASE_URL`.
+   - `BRICKSET_API_KEY` – ključ za Brickset API.
+   - `ADMIN_EMAIL`, `ADMIN_PASSWORD` – administratorski račun, ki ga ustvari skripta za začetne podatke.
+2. Zaženite podatkovno bazo. Ob prvem zagonu se izvede `db/schema.sql`, ki ustvari tabele:
+   ```
+   docker compose up -d
+   ```
+3. Ustvarite virtualno okolje in namestite knjižnice:
+   ```
+   python -m venv .venv
+   .venv\Scripts\Activate.ps1
+   pip install -r requirements.txt
+   ```
+4. Napolnite katalog kompletov in ustvarite administratorski račun (če se baza še zaganja, ukaz po nekaj sekundah ponovite):
+   ```
+   python seed/seed.py
+   ```
+5. Zaženite backend, ki streže tudi frontend:
+   ```
+   uvicorn backend.main:app --reload
+   ```
+6. Odprite `http://127.0.0.1:8000`.
+
+Ob spremembi `db/schema.sql` bazo izbrišite in ustvarite na novo: `docker compose down -v`, nato koraka 2 in 4.
 
 ## Dokumentacija
 
