@@ -32,6 +32,7 @@ Potrebni so Docker Desktop, Python 3.13 in brezplačen ključ za [Brickset API](
    - `POSTGRES_PASSWORD` – poljubno geslo podatkovne baze; isto geslo vpišite namesto `<geslo>` v `DATABASE_URL`.
    - `BRICKSET_API_KEY` – ključ za Brickset API.
    - `ADMIN_EMAIL`, `ADMIN_PASSWORD` – administratorski račun, ki ga ustvari skripta za začetne podatke.
+   - `SECRET_KEY` – poljuben dolg naključen niz, s katerim backend podpisuje piškotek seje.
 2. Zaženite podatkovno bazo. Ob prvem zagonu se izvede `db/schema.sql`, ki ustvari tabele:
    ```
    docker compose up -d
