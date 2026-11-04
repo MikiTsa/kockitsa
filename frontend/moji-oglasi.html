@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Moji oglasi – KockiTsa</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body data-login>
+    <header id="header"></header>
+    <main>
+        <div class="panel">
+            <h2>Moji oglasi</h2>
+            <table>
+                <thead><tr><th>Komplet</th><th>Stanje</th><th>Cena</th><th>Status</th><th>Oddano</th></tr></thead>
+                <tbody id="mine"></tbody>
+            </table>
+        </div>
+    </main>
+    <script src="app.js"></script>
+    <script>
+        currentUser.then(async (me) => {
+            if (!me) {
+                return;
+            }
+            const { ok, data } = await api("GET", "/my/listings");
+            if (!ok) {
+                return toast(errorText(data, "Oglasov ni mogoče naložiti."), true);
+            }
+            const tbody = document.getElementById("mine");
+            if (!data.length) {
+                tbody.append(el("tr", {}, el("td", { colSpan: 5, className: "empty" },
+                    "Nimate še oglasov. ", el("a", { href: "oddaj.html", textContent: "Oddaj oglas" }))));
+            }
+            for (const l of data) {
+                tbody.append(el("tr", {},
+                    el("td", { textContent: `${l.set_number} ${l.set_name}` }),
+                    el("td", { textContent: CONDITIONS[l.condition] }),
+                    el("td", { textContent: eur.format(l.price) }),
+                    el("td", {}, badge(l.status)),
+                    el("td", { textContent: new Date(l.created_at).toLocaleString("sl-SI") })));
+            }
+        });
+    </script>
+</body>
+</html>

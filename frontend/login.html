@@ -2,17 +2,23 @@
 <html lang="sl">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Prijava – KockiTsa</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <header id="header"></header>
-    <h1>Prijava</h1>
-    <form id="form">
-        <p><label>E-pošta <input name="email" type="email" required></label></p>
-        <p><label>Geslo <input name="password" type="password" required></label></p>
-        <p id="error"></p>
-        <button>Prijavi se</button>
-    </form>
+    <main>
+        <div class="panel">
+            <h2>Prijava</h2>
+            <form id="form" class="form">
+                <label>E-pošta <input name="email" type="email" required></label>
+                <label>Geslo <input name="password" type="password" required></label>
+                <div><button class="btn">Prijavi se</button></div>
+                <p class="muted">Nimate računa? <a href="register.html">Registracija</a></p>
+            </form>
+        </div>
+    </main>
     <script src="app.js"></script>
     <script>
         document.getElementById("form").onsubmit = async (event) => {
@@ -21,7 +27,7 @@
             if (ok) {
                 location.href = "/";
             } else {
-                document.getElementById("error").textContent = errorText(data, "Izpolnite vsa polja.");
+                toast(errorText(data, "Izpolnite vsa polja."), true);
             }
         };
     </script>

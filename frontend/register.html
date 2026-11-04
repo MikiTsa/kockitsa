@@ -2,23 +2,31 @@
 <html lang="sl">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Registracija – KockiTsa</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <header id="header"></header>
-    <h1>Registracija</h1>
-    <form id="form">
-        <p><label>Ime <input name="name" required></label></p>
-        <p><label>E-pošta <input name="email" type="email" required></label></p>
-        <p><label>Geslo <input name="password" type="password" required></label></p>
-        <p>
-            Vloga:
-            <label><input name="role" type="radio" value="buyer" required> kupec</label>
-            <label><input name="role" type="radio" value="seller"> prodajalec</label>
-        </p>
-        <p id="error"></p>
-        <button>Registriraj se</button>
-    </form>
+    <main>
+        <div class="panel">
+            <h2>Registracija</h2>
+            <form id="form" class="form">
+                <label>Ime <input name="name" required></label>
+                <label>E-pošta <input name="email" type="email" required></label>
+                <label>Geslo <input name="password" type="password" required></label>
+                <div>
+                    Vloga
+                    <div class="radios">
+                        <label><input name="role" type="radio" value="buyer" required> kupec</label>
+                        <label><input name="role" type="radio" value="seller"> prodajalec</label>
+                    </div>
+                </div>
+                <div><button class="btn">Registriraj se</button></div>
+                <p class="muted">Že imate račun? <a href="login.html">Prijava</a></p>
+            </form>
+        </div>
+    </main>
     <script src="app.js"></script>
     <script>
         document.getElementById("form").onsubmit = async (event) => {
@@ -27,7 +35,7 @@
             if (ok) {
                 location.href = "login.html";
             } else {
-                document.getElementById("error").textContent = errorText(data, "Izpolnite vsa polja in izberite vlogo.");
+                toast(errorText(data, "Izpolnite vsa polja in izberite vlogo."), true);
             }
         };
     </script>
