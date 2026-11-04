@@ -49,6 +49,12 @@ def user(request: Request, *roles):
     return request.session["user_id"]
 
 
+def change(sql, params):
+    with connect() as conn:
+        if conn.execute(sql, params).rowcount == 0:
+            raise HTTPException(409, "Oglas ne obstaja ali dejanje ni dovoljeno")
+
+
 @app.post("/register", status_code=201)
 def register(data: RegisterIn):
     password_hash = bcrypt.hashpw(data.password.encode(), bcrypt.gensalt()).decode()
@@ -130,6 +136,32 @@ def my_listings(request: Request):
             "ORDER BY l.created_at DESC",
             (seller_id,),
         ).fetchall()
+
+
+@app.get("/admin/listings")
+def pending_listings(request: Request):
+    user(request, "admin")
+    with connect() as conn:
+        return conn.execute(
+            "SELECT l.id, s.set_number, s.name AS set_name, s.theme, s.piece_count, s.release_year, "
+            "l.condition, l.price, l.description, u.name AS seller_name, l.created_at "
+            "FROM listings l "
+            "JOIN sets s ON s.id = l.set_id "
+            "JOIN users u ON u.id = l.seller_id "
+            "WHERE l.status = 'pending' "
+            "ORDER BY l.created_at"
+        ).fetchall()
+
+
+@app.post("/listings/{listing_id}/approve")
+def approve(listing_id: int, request: Request):
+    user(request, "admin")
+    change(
+        "UPDATE listings "
+        "SET status = 'approved' "
+        "WHERE id = %s AND status = 'pending'",
+        (listing_id,),
+    )
 
 
 # keep mount last
