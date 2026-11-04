@@ -37,6 +37,10 @@ class ListingIn(BaseModel):
     description: str | None = None
 
 
+class RejectIn(BaseModel):
+    reason: str = Field(min_length=1)
+
+
 def connect():
     return psycopg.connect(os.environ["DATABASE_URL"], row_factory=dict_row)
 
@@ -129,7 +133,8 @@ def my_listings(request: Request):
     seller_id = user(request, "seller")
     with connect() as conn:
         return conn.execute(
-            "SELECT l.id, s.set_number, s.name AS set_name, l.condition, l.price, l.status, l.created_at "
+            "SELECT l.id, s.set_number, s.name AS set_name, l.condition, l.price, l.status, "
+            "l.rejection_reason, l.created_at "
             "FROM listings l "
             "JOIN sets s ON s.id = l.set_id "
             "WHERE l.seller_id = %s "
@@ -161,6 +166,17 @@ def approve(listing_id: int, request: Request):
         "SET status = 'approved' "
         "WHERE id = %s AND status = 'pending'",
         (listing_id,),
+    )
+
+
+@app.post("/listings/{listing_id}/reject")
+def reject(listing_id: int, data: RejectIn, request: Request):
+    user(request, "admin")
+    change(
+        "UPDATE listings "
+        "SET status = 'rejected', rejection_reason = %s "
+        "WHERE id = %s AND status = 'pending'",
+        (data.reason, listing_id),
     )
 
 
