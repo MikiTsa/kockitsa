@@ -22,17 +22,31 @@
         function card(l) {
             const approve = el("button", { className: "btn", textContent: "Odobri",
                 onclick: () => act(`/listings/${l.id}/approve`, null, "Oglas je objavljen.") });
+            const reason = el("textarea", { rows: 3 });
+            const confirmReject = el("button", { className: "btn danger", textContent: "Potrdi zavrnitev", disabled: true,
+                onclick: () => act(`/listings/${l.id}/reject`, { reason: reason.value.trim() }, "Oglas je zavrnjen.") });
+            const rejectForm = el("div", { className: "form", hidden: true },
+                el("label", {}, "Razlog zavrnitve *", reason),
+                el("div", { className: "actions" }, confirmReject,
+                    el("button", { className: "btn ghost", textContent: "Prekliči", onclick: () => toggle(false) })));
+            const toggle = (open) => {
+                rejectForm.hidden = !open;
+                approve.disabled = open;
+            };
+            reason.oninput = () => confirmReject.disabled = !reason.value.trim();
             return el("div", { className: "panel" },
                 el("div", { className: "head" },
                     el("div", {}, el("strong", { textContent: `${l.set_number} ${l.set_name}` }), el("br"),
                         el("small", { className: "muted", textContent: `${l.theme} · ${l.piece_count} kock · ${l.release_year}` })),
-                    el("div", { className: "actions" }, approve)),
+                    el("div", { className: "actions" }, approve,
+                        el("button", { className: "btn ghost", textContent: "Zavrni", onclick: () => toggle(true) }))),
                 el("div", { className: "facts" },
                     fact("Stanje", CONDITIONS[l.condition]),
                     fact("Cena", eur.format(l.price)),
                     fact("Prodajalec", l.seller_name),
                     fact("Oddano", new Date(l.created_at).toLocaleString("sl-SI"))),
-                l.description ? fact("Opis", l.description) : "");
+                l.description ? fact("Opis", l.description) : "",
+                rejectForm);
         }
 
         async function load() {
