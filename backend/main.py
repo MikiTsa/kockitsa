@@ -1,4 +1,5 @@
 import os
+from decimal import Decimal
 from pathlib import Path
 from typing import Literal
 
@@ -27,6 +28,13 @@ class RegisterIn(BaseModel):
 class LoginIn(BaseModel):
     email: str
     password: str
+
+
+class ListingIn(BaseModel):
+    set_id: int
+    condition: Literal["sealed", "new", "used"]
+    price: Decimal = Field(gt=0, max_digits=10, decimal_places=2)
+    description: str | None = None
 
 
 def connect():
@@ -80,6 +88,34 @@ def me(request: Request):
     if "user_id" not in request.session:
         return None
     return {"name": request.session["name"], "role": request.session["role"]}
+
+
+@app.get("/sets")
+def search_sets(q: str = ""):
+    with connect() as conn:
+        return conn.execute(
+            "SELECT id, set_number, name, theme, piece_count, release_year "
+            "FROM sets "
+            "WHERE set_number ILIKE %s OR name ILIKE %s "
+            "ORDER BY name "
+            "LIMIT 20",
+            (f"%{q}%", f"%{q}%"),
+        ).fetchall()
+
+
+@app.post("/listings", status_code=201)
+def create_listing(listing: ListingIn, request: Request):
+    seller_id = user(request, "seller")
+    try:
+        with connect() as conn:
+            return conn.execute(
+                "INSERT INTO listings (set_id, seller_id, condition, price, description) "
+                "VALUES (%s, %s, %s, %s, %s) "
+                "RETURNING id, status",
+                (listing.set_id, seller_id, listing.condition, listing.price, listing.description or None),
+            ).fetchone()
+    except psycopg.errors.ForeignKeyViolation:
+        raise HTTPException(404, "Komplet ni v katalogu")
 
 
 # keep mount last
