@@ -16,6 +16,7 @@ input[type=checkbox], input[type=radio] { width: auto; accent-color: var(--amber
 .btn.ghost:hover { border-color: var(--teal); }
 .btn.danger { background: var(--red); color: var(--sky); }
 .btn.small { padding: 4px 10px; font-size: 12px; }
+.btn:disabled { opacity: .4; pointer-events: none; }
 .muted { color: var(--muted); }
 
 header { position: sticky; top: 0; z-index: 10; background: var(--navy); border-bottom: 1px solid var(--line); }
@@ -36,6 +37,12 @@ main { max-width: 1400px; margin: 0 auto; padding: 16px 20px; display: grid; gap
 .radios label { display: flex; align-items: center; gap: 6px; }
 .chosen { padding: 10px 12px; border: 1px dashed var(--line); border-radius: 8px; }
 .chosen small { color: var(--muted); }
+.title { margin: 0; font-size: 18px; color: var(--amber); }
+.head { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+.head strong { font-size: 15px; }
+.actions { display: flex; gap: 8px; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px 40px; margin: 14px 0 8px; }
+.panel .form { margin-top: 14px; }
 
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 9px 10px; text-align: left; border-bottom: 1px solid var(--line); }

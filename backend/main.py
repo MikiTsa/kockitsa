@@ -37,6 +37,10 @@ class ListingIn(BaseModel):
     description: str | None = None
 
 
+class RejectIn(BaseModel):
+    reason: str = Field(min_length=1)
+
+
 def connect():
     return psycopg.connect(os.environ["DATABASE_URL"], row_factory=dict_row)
 
@@ -47,6 +51,12 @@ def user(request: Request, *roles):
     if roles and request.session["role"] not in roles:
         raise HTTPException(403, "Dejanje ni dovoljeno za vašo vlogo")
     return request.session["user_id"]
+
+
+def change(sql, params):
+    with connect() as conn:
+        if conn.execute(sql, params).rowcount == 0:
+            raise HTTPException(409, "Oglas ne obstaja ali dejanje ni dovoljeno")
 
 
 @app.post("/register", status_code=201)
@@ -123,13 +133,51 @@ def my_listings(request: Request):
     seller_id = user(request, "seller")
     with connect() as conn:
         return conn.execute(
-            "SELECT l.id, s.set_number, s.name AS set_name, l.condition, l.price, l.status, l.created_at "
+            "SELECT l.id, s.set_number, s.name AS set_name, l.condition, l.price, l.status, "
+            "l.rejection_reason, l.created_at "
             "FROM listings l "
             "JOIN sets s ON s.id = l.set_id "
             "WHERE l.seller_id = %s "
             "ORDER BY l.created_at DESC",
             (seller_id,),
         ).fetchall()
+
+
+@app.get("/admin/listings")
+def pending_listings(request: Request):
+    user(request, "admin")
+    with connect() as conn:
+        return conn.execute(
+            "SELECT l.id, s.set_number, s.name AS set_name, s.theme, s.piece_count, s.release_year, "
+            "l.condition, l.price, l.description, u.name AS seller_name, l.created_at "
+            "FROM listings l "
+            "JOIN sets s ON s.id = l.set_id "
+            "JOIN users u ON u.id = l.seller_id "
+            "WHERE l.status = 'pending' "
+            "ORDER BY l.created_at"
+        ).fetchall()
+
+
+@app.post("/listings/{listing_id}/approve")
+def approve(listing_id: int, request: Request):
+    user(request, "admin")
+    change(
+        "UPDATE listings "
+        "SET status = 'approved' "
+        "WHERE id = %s AND status = 'pending'",
+        (listing_id,),
+    )
+
+
+@app.post("/listings/{listing_id}/reject")
+def reject(listing_id: int, data: RejectIn, request: Request):
+    user(request, "admin")
+    change(
+        "UPDATE listings "
+        "SET status = 'rejected', rejection_reason = %s "
+        "WHERE id = %s AND status = 'pending'",
+        (data.reason, listing_id),
+    )
 
 
 # keep mount last
