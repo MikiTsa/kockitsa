@@ -118,5 +118,19 @@ def create_listing(listing: ListingIn, request: Request):
         raise HTTPException(404, "Komplet ni v katalogu")
 
 
+@app.get("/my/listings")
+def my_listings(request: Request):
+    seller_id = user(request, "seller")
+    with connect() as conn:
+        return conn.execute(
+            "SELECT l.id, s.set_number, s.name AS set_name, l.condition, l.price, l.status, l.created_at "
+            "FROM listings l "
+            "JOIN sets s ON s.id = l.set_id "
+            "WHERE l.seller_id = %s "
+            "ORDER BY l.created_at DESC",
+            (seller_id,),
+        ).fetchall()
+
+
 # keep mount last
 app.mount("/", StaticFiles(directory=Path(__file__).parent.parent / "frontend", html=True), name="frontend")
