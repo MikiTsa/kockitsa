@@ -229,5 +229,16 @@ def sell(listing_id: int, request: Request):
     )
 
 
+@app.post("/listings/{listing_id}/release")
+def release(listing_id: int, request: Request):
+    seller_id = user(request, "seller")
+    change(
+        "UPDATE listings "
+        "SET status = 'approved', buyer_id = NULL "
+        "WHERE id = %s AND seller_id = %s AND status = 'reserved'",
+        (listing_id, seller_id),
+    )
+
+
 # keep mount last
 app.mount("/", StaticFiles(directory=Path(__file__).parent.parent / "frontend", html=True), name="frontend")
