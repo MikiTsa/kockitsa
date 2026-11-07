@@ -12,14 +12,21 @@
         <div class="panel">
             <h2>Objavljeni oglasi</h2>
             <table>
-                <thead><tr><th>Komplet</th><th>Tema</th><th>Stanje</th><th>Cena</th><th>Prodajalec</th></tr></thead>
+                <thead><tr><th>Komplet</th><th>Tema</th><th>Stanje</th><th>Cena</th><th>Prodajalec</th><th></th></tr></thead>
                 <tbody id="listings"></tbody>
             </table>
         </div>
     </main>
     <script src="app.js"></script>
     <script>
+        async function reserve(id) {
+            const { ok, data } = await api("POST", `/listings/${id}/reserve`);
+            toast(ok ? "Oglas je rezerviran." : errorText(data, "Rezervacija ni uspela."), !ok);
+            load();
+        }
+
         async function load() {
+            const buyer = (await currentUser)?.role === "buyer";
             const { ok, data } = await api("GET", "/listings");
             if (!ok) {
                 return toast(errorText(data, "Oglasov ni mogoče naložiti."), true);
@@ -30,9 +37,10 @@
                 el("td", { textContent: l.theme }),
                 el("td", { textContent: CONDITIONS[l.condition] }),
                 el("td", { textContent: eur.format(l.price) }),
-                el("td", { textContent: l.seller_name }))));
+                el("td", { textContent: l.seller_name }),
+                el("td", {}, buyer ? el("button", { className: "btn small", textContent: "Rezerviraj", onclick: () => reserve(l.id) }) : ""))));
             if (!data.length) {
-                tbody.append(el("tr", {}, el("td", { colSpan: 5, className: "empty", textContent: "Ni objavljenih oglasov." })));
+                tbody.append(el("tr", {}, el("td", { colSpan: 6, className: "empty", textContent: "Ni objavljenih oglasov." })));
             }
         }
 
