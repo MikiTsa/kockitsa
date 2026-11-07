@@ -147,9 +147,10 @@ def my_listings(request: Request):
     with connect() as conn:
         return conn.execute(
             "SELECT l.id, s.set_number, s.name AS set_name, l.condition, l.price, l.status, "
-            "l.rejection_reason, l.created_at "
+            "l.rejection_reason, l.created_at, b.name AS buyer_name, b.email AS buyer_email "
             "FROM listings l "
             "JOIN sets s ON s.id = l.set_id "
+            "LEFT JOIN users b ON b.id = l.buyer_id "
             "WHERE l.seller_id = %s "
             "ORDER BY l.created_at DESC",
             (seller_id,),
@@ -198,10 +199,13 @@ def reserve(listing_id: int, request: Request):
     buyer_id = user(request, "buyer")
     with connect() as conn:
         listing = conn.execute(
-            "UPDATE listings "
+            "UPDATE listings l "
             "SET status = 'reserved', buyer_id = %s "
-            "WHERE id = %s AND status = 'approved' AND seller_id <> %s "
-            "RETURNING id, status",
+            "FROM sets s, users u "
+            "WHERE l.id = %s AND l.status = 'approved' AND l.seller_id <> %s "
+            "AND s.id = l.set_id AND u.id = l.seller_id "
+            "RETURNING s.set_number, s.name AS set_name, l.condition, l.price, "
+            "u.name AS seller_name, u.email AS seller_email",
             (buyer_id, listing_id, buyer_id),
         ).fetchone()
         if not listing and conn.execute(
