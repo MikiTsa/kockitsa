@@ -12,38 +12,44 @@
         <div class="panel">
             <h2>Moji oglasi</h2>
             <table>
-                <thead><tr><th>Komplet</th><th>Stanje</th><th>Cena</th><th>Status</th><th>Kupec</th><th>Razlog zavrnitve</th><th>Oddano</th></tr></thead>
+                <thead><tr><th>Komplet</th><th>Stanje</th><th>Cena</th><th>Status</th><th>Kupec</th><th>Razlog zavrnitve</th><th>Oddano</th><th></th></tr></thead>
                 <tbody id="mine"></tbody>
             </table>
         </div>
     </main>
     <script src="app.js"></script>
     <script>
-        currentUser.then(async (me) => {
-            if (!me) {
-                return;
-            }
+        async function act(url, message) {
+            const { ok, data } = await api("POST", url);
+            toast(ok ? message : errorText(data, "Dejanje ni uspelo."), !ok);
+            load();
+        }
+
+        async function load() {
             const { ok, data } = await api("GET", "/my/listings");
             if (!ok) {
                 return toast(errorText(data, "Oglasov ni mogoče naložiti."), true);
             }
             const tbody = document.getElementById("mine");
+            tbody.replaceChildren(...data.map((l) => el("tr", {},
+                el("td", { textContent: `${l.set_number} ${l.set_name}` }),
+                el("td", { textContent: CONDITIONS[l.condition] }),
+                el("td", { textContent: eur.format(l.price) }),
+                el("td", {}, badge(l.status)),
+                el("td", {}, ...(l.buyer_email ? [l.buyer_name, el("br"),
+                    el("a", { href: `mailto:${l.buyer_email}`, textContent: l.buyer_email })] : [])),
+                el("td", { textContent: l.rejection_reason ?? "" }),
+                el("td", { textContent: new Date(l.created_at).toLocaleString("sl-SI") }),
+                el("td", {}, l.status === "reserved" ? el("div", { className: "actions" },
+                    el("button", { className: "btn small", textContent: "Potrdi prodajo",
+                        onclick: () => act(`/listings/${l.id}/sell`, "Prodaja je potrjena.") })) : ""))));
             if (!data.length) {
-                tbody.append(el("tr", {}, el("td", { colSpan: 7, className: "empty" },
+                tbody.append(el("tr", {}, el("td", { colSpan: 8, className: "empty" },
                     "Nimate še oglasov. ", el("a", { href: "oddaj.html", textContent: "Oddaj oglas" }))));
             }
-            for (const l of data) {
-                tbody.append(el("tr", {},
-                    el("td", { textContent: `${l.set_number} ${l.set_name}` }),
-                    el("td", { textContent: CONDITIONS[l.condition] }),
-                    el("td", { textContent: eur.format(l.price) }),
-                    el("td", {}, badge(l.status)),
-                    el("td", {}, ...(l.buyer_email ? [l.buyer_name, el("br"),
-                        el("a", { href: `mailto:${l.buyer_email}`, textContent: l.buyer_email })] : [])),
-                    el("td", { textContent: l.rejection_reason ?? "" }),
-                    el("td", { textContent: new Date(l.created_at).toLocaleString("sl-SI") })));
-            }
-        });
+        }
+
+        currentUser.then((me) => me && load());
     </script>
 </body>
 </html>
