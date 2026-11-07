@@ -113,6 +113,19 @@ def search_sets(q: str = ""):
         ).fetchall()
 
 
+@app.get("/listings")
+def approved_listings():
+    with connect() as conn:
+        return conn.execute(
+            "SELECT l.id, s.set_number, s.name AS set_name, s.theme, l.condition, l.price, u.name AS seller_name "
+            "FROM listings l "
+            "JOIN sets s ON s.id = l.set_id "
+            "JOIN users u ON u.id = l.seller_id "
+            "WHERE l.status = 'approved' "
+            "ORDER BY l.created_at DESC"
+        ).fetchall()
+
+
 @app.post("/listings", status_code=201)
 def create_listing(listing: ListingIn, request: Request):
     seller_id = user(request, "seller")
