@@ -193,5 +193,26 @@ def reject(listing_id: int, data: RejectIn, request: Request):
     )
 
 
+@app.post("/listings/{listing_id}/reserve")
+def reserve(listing_id: int, request: Request):
+    buyer_id = user(request, "buyer")
+    with connect() as conn:
+        listing = conn.execute(
+            "UPDATE listings "
+            "SET status = 'reserved', buyer_id = %s "
+            "WHERE id = %s AND status = 'approved' AND seller_id <> %s "
+            "RETURNING id, status",
+            (buyer_id, listing_id, buyer_id),
+        ).fetchone()
+        if not listing and conn.execute(
+            "SELECT 1 FROM listings WHERE id = %s AND seller_id = %s",
+            (listing_id, buyer_id),
+        ).fetchone():
+            raise HTTPException(403, "Lastnega oglasa ne morete rezervirati")
+    if not listing:
+        raise HTTPException(409, "Oglas ni več na voljo")
+    return listing
+
+
 # keep mount last
 app.mount("/", StaticFiles(directory=Path(__file__).parent.parent / "frontend", html=True), name="frontend")
