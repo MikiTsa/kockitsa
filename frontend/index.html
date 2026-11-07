@@ -9,6 +9,7 @@
 <body>
     <header id="header"></header>
     <main>
+        <div class="panel" id="reserved" hidden></div>
         <div class="panel">
             <h2>Objavljeni oglasi</h2>
             <table>
@@ -19,8 +20,26 @@
     </main>
     <script src="app.js"></script>
     <script>
+        const fact = (label, ...value) => el("div", {}, el("b", { textContent: `${label}: ` }), ...value);
+
+        function confirmation(l) {
+            const box = document.getElementById("reserved");
+            box.replaceChildren(el("h2", { textContent: "Oglas je rezerviran" }),
+                el("div", { className: "facts" },
+                    fact("Komplet", `${l.set_number} ${l.set_name}`),
+                    fact("Stanje", CONDITIONS[l.condition]),
+                    fact("Cena", eur.format(l.price)),
+                    fact("Prodajalec", `${l.seller_name}, `,
+                        el("a", { href: `mailto:${l.seller_email}`, textContent: l.seller_email }))),
+                el("p", { className: "muted", textContent: "Za prevzem se dogovorite s prodajalcem po e-pošti." }));
+            box.hidden = false;
+        }
+
         async function reserve(id) {
             const { ok, data } = await api("POST", `/listings/${id}/reserve`);
+            if (ok) {
+                confirmation(data);
+            }
             toast(ok ? "Oglas je rezerviran." : errorText(data, "Rezervacija ni uspela."), !ok);
             load();
         }
