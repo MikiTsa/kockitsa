@@ -9,11 +9,61 @@
 <body>
     <header id="header"></header>
     <main>
+        <div class="panel" id="reserved" hidden></div>
         <div class="panel">
-            <h2>Tržnica LEGO kompletov</h2>
-            <p class="muted">Kupujte in prodajajte nove in rabljene LEGO komplete.</p>
+            <h2>Objavljeni oglasi</h2>
+            <table>
+                <thead><tr><th>Komplet</th><th>Tema</th><th>Stanje</th><th>Cena</th><th>Prodajalec</th><th></th></tr></thead>
+                <tbody id="listings"></tbody>
+            </table>
         </div>
     </main>
     <script src="app.js"></script>
+    <script>
+        const fact = (label, ...value) => el("div", {}, el("b", { textContent: `${label}: ` }), ...value);
+
+        function confirmation(l) {
+            const box = document.getElementById("reserved");
+            box.replaceChildren(el("h2", { textContent: "Oglas je rezerviran" }),
+                el("div", { className: "facts" },
+                    fact("Komplet", `${l.set_number} ${l.set_name}`),
+                    fact("Stanje", CONDITIONS[l.condition]),
+                    fact("Cena", eur.format(l.price)),
+                    fact("Prodajalec", `${l.seller_name}, `,
+                        el("a", { href: `mailto:${l.seller_email}`, textContent: l.seller_email }))),
+                el("p", { className: "muted", textContent: "Za prevzem se dogovorite s prodajalcem po e-pošti." }));
+            box.hidden = false;
+        }
+
+        async function reserve(id) {
+            const { ok, data } = await api("POST", `/listings/${id}/reserve`);
+            if (ok) {
+                confirmation(data);
+            }
+            toast(ok ? "Oglas je rezerviran." : errorText(data, "Rezervacija ni uspela."), !ok);
+            load();
+        }
+
+        async function load() {
+            const buyer = (await currentUser)?.role === "buyer";
+            const { ok, data } = await api("GET", "/listings");
+            if (!ok) {
+                return toast(errorText(data, "Oglasov ni mogoče naložiti."), true);
+            }
+            const tbody = document.getElementById("listings");
+            tbody.replaceChildren(...data.map((l) => el("tr", {},
+                el("td", { textContent: `${l.set_number} ${l.set_name}` }),
+                el("td", { textContent: l.theme }),
+                el("td", { textContent: CONDITIONS[l.condition] }),
+                el("td", { textContent: eur.format(l.price) }),
+                el("td", { textContent: l.seller_name }),
+                el("td", {}, buyer ? el("button", { className: "btn small", textContent: "Rezerviraj", onclick: () => reserve(l.id) }) : ""))));
+            if (!data.length) {
+                tbody.append(el("tr", {}, el("td", { colSpan: 6, className: "empty", textContent: "Ni objavljenih oglasov." })));
+            }
+        }
+
+        load();
+    </script>
 </body>
 </html>

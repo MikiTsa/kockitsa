@@ -113,6 +113,19 @@ def search_sets(q: str = ""):
         ).fetchall()
 
 
+@app.get("/listings")
+def approved_listings():
+    with connect() as conn:
+        return conn.execute(
+            "SELECT l.id, s.set_number, s.name AS set_name, s.theme, l.condition, l.price, u.name AS seller_name "
+            "FROM listings l "
+            "JOIN sets s ON s.id = l.set_id "
+            "JOIN users u ON u.id = l.seller_id "
+            "WHERE l.status = 'approved' "
+            "ORDER BY l.created_at DESC"
+        ).fetchall()
+
+
 @app.post("/listings", status_code=201)
 def create_listing(listing: ListingIn, request: Request):
     seller_id = user(request, "seller")
@@ -134,9 +147,10 @@ def my_listings(request: Request):
     with connect() as conn:
         return conn.execute(
             "SELECT l.id, s.set_number, s.name AS set_name, l.condition, l.price, l.status, "
-            "l.rejection_reason, l.created_at "
+            "l.rejection_reason, l.created_at, b.name AS buyer_name, b.email AS buyer_email "
             "FROM listings l "
             "JOIN sets s ON s.id = l.set_id "
+            "LEFT JOIN users b ON b.id = l.buyer_id "
             "WHERE l.seller_id = %s "
             "ORDER BY l.created_at DESC",
             (seller_id,),
@@ -178,6 +192,30 @@ def reject(listing_id: int, data: RejectIn, request: Request):
         "WHERE id = %s AND status = 'pending'",
         (data.reason, listing_id),
     )
+
+
+@app.post("/listings/{listing_id}/reserve")
+def reserve(listing_id: int, request: Request):
+    buyer_id = user(request, "buyer")
+    with connect() as conn:
+        listing = conn.execute(
+            "UPDATE listings l "
+            "SET status = 'reserved', buyer_id = %s "
+            "FROM sets s, users u "
+            "WHERE l.id = %s AND l.status = 'approved' AND l.seller_id <> %s "
+            "AND s.id = l.set_id AND u.id = l.seller_id "
+            "RETURNING s.set_number, s.name AS set_name, l.condition, l.price, "
+            "u.name AS seller_name, u.email AS seller_email",
+            (buyer_id, listing_id, buyer_id),
+        ).fetchone()
+        if not listing and conn.execute(
+            "SELECT 1 FROM listings WHERE id = %s AND seller_id = %s",
+            (listing_id, buyer_id),
+        ).fetchone():
+            raise HTTPException(403, "Lastnega oglasa ne morete rezervirati")
+    if not listing:
+        raise HTTPException(409, "Oglas ni več na voljo")
+    return listing
 
 
 # keep mount last
