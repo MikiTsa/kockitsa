@@ -42,7 +42,9 @@
                 el("td", { textContent: new Date(l.created_at).toLocaleString("sl-SI") }),
                 el("td", {}, l.status === "reserved" ? el("div", { className: "actions" },
                     el("button", { className: "btn small", textContent: "Potrdi prodajo",
-                        onclick: () => act(`/listings/${l.id}/sell`, "Prodaja je potrjena.") })) : ""))));
+                        onclick: () => act(`/listings/${l.id}/sell`, "Prodaja je potrjena.") }),
+                    el("button", { className: "btn ghost small", textContent: "Sprosti rezervacijo",
+                        onclick: () => act(`/listings/${l.id}/release`, "Rezervacija je sproščena.") })) : ""))));
             if (!data.length) {
                 tbody.append(el("tr", {}, el("td", { colSpan: 8, className: "empty" },
                     "Nimate še oglasov. ", el("a", { href: "oddaj.html", textContent: "Oddaj oglas" }))));
