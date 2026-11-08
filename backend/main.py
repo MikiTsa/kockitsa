@@ -45,6 +45,12 @@ class RoleIn(BaseModel):
     role: Literal["buyer", "seller"]
 
 
+class SearchIn(BaseModel):
+    set_id: int
+    max_price: Decimal = Field(gt=0, max_digits=10, decimal_places=2)
+    conditions: list[Literal["sealed", "new", "used"]] = Field(min_length=1)
+
+
 def connect():
     return psycopg.connect(os.environ["DATABASE_URL"], row_factory=dict_row)
 
@@ -256,6 +262,37 @@ def release(listing_id: int, request: Request):
         "WHERE id = %s AND seller_id = %s AND status = 'reserved'",
         (listing_id, seller_id),
     )
+
+
+@app.post("/searches", status_code=201)
+def create_search(search: SearchIn, request: Request):
+    buyer_id = user(request, "buyer")
+    try:
+        with connect() as conn:
+            return conn.execute(
+                "INSERT INTO searches (buyer_id, set_id, max_price, conditions) "
+                "VALUES (%s, %s, %s, %s) "
+                "RETURNING id, status",
+                (buyer_id, search.set_id, search.max_price, search.conditions),
+            ).fetchone()
+    except psycopg.errors.UniqueViolation:
+        raise HTTPException(409, "Za ta komplet že imate aktivno iskanje")
+    except psycopg.errors.ForeignKeyViolation:
+        raise HTTPException(404, "Komplet ni v katalogu")
+
+
+@app.get("/my/searches")
+def my_searches(request: Request):
+    buyer_id = user(request, "buyer")
+    with connect() as conn:
+        return conn.execute(
+            "SELECT se.id, s.set_number, s.name AS set_name, se.max_price, se.conditions, se.status "
+            "FROM searches se "
+            "JOIN sets s ON s.id = se.set_id "
+            "WHERE se.buyer_id = %s AND se.status = 'active' "
+            "ORDER BY se.created_at DESC",
+            (buyer_id,),
+        ).fetchall()
 
 
 # keep mount last
