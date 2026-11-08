@@ -9,6 +9,7 @@
 <body data-login data-role="buyer">
     <header id="header"></header>
     <main>
+        <div class="panel" id="reserved" hidden></div>
         <div class="panel">
             <h2>Novo iskanje</h2>
             <form id="form" class="form">
@@ -41,7 +42,41 @@
         let sets = [];
         let chosen = null;
 
-        const fact = (label, value) => el("div", {}, el("b", { textContent: `${label}: ` }), value);
+        const fact = (label, ...value) => el("div", {}, el("b", { textContent: `${label}: ` }), ...value);
+
+        function confirmation(l) {
+            const box = document.getElementById("reserved");
+            box.replaceChildren(el("h2", { textContent: "Oglas je rezerviran" }),
+                el("div", { className: "facts" },
+                    fact("Komplet", `${l.set_number} ${l.set_name}`),
+                    fact("Stanje", CONDITIONS[l.condition]),
+                    fact("Cena", eur.format(l.price)),
+                    fact("Prodajalec", `${l.seller_name}, `,
+                        el("a", { href: `mailto:${l.seller_email}`, textContent: l.seller_email }))),
+                el("p", { className: "muted", textContent: "Za prevzem se dogovorite s prodajalcem po e-pošti." }));
+            box.hidden = false;
+        }
+
+        async function reserve(id) {
+            const { ok, data } = await api("POST", `/listings/${id}/reserve`);
+            if (ok) {
+                confirmation(data);
+            }
+            toast(ok ? "Oglas je rezerviran." : errorText(data, "Rezervacija ni uspela."), !ok);
+            load();
+        }
+
+        function matches(s) {
+            if (!s.matches.length) {
+                return el("p", { className: "muted", textContent: "Ni ujemajočih oglasov." });
+            }
+            return el("div", {}, el("b", { textContent: `Ujemajoči oglasi (${s.matches.length})` }),
+                el("table", {}, el("tbody", {}, ...s.matches.map((m) => el("tr", {},
+                    el("td", { textContent: CONDITIONS[m.condition] }),
+                    el("td", { textContent: eur.format(m.price) }),
+                    el("td", { textContent: `prodajalec: ${m.seller_name}` }),
+                    el("td", {}, el("button", { className: "btn small", textContent: "Rezerviraj", onclick: () => reserve(m.id) })))))));
+        }
 
         input.oninput = async () => {
             chosen = sets.find((s) => `${s.set_number} ${s.name}` === input.value) ?? null;
@@ -82,7 +117,8 @@
                 el("div", { className: "facts" },
                     fact("Najvišja cena", eur.format(s.max_price)),
                     fact("Sprejemljiva stanja", s.conditions.map((c) => CONDITIONS[c]).join(", ")),
-                    fact("Status", SEARCH_STATUSES[s.status])));
+                    fact("Status", SEARCH_STATUSES[s.status])),
+                matches(s));
         }
 
         async function load() {
@@ -93,6 +129,7 @@
             document.getElementById("active").replaceChildren(...(data.length
                 ? data.map(card)
                 : [el("p", { className: "muted", textContent: "Nimate aktivnih iskanj." })]));
+            updateCounter();
         }
 
         currentUser.then((me) => me && load());

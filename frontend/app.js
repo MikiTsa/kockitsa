@@ -42,6 +42,14 @@ function errorText(data, fallback) {
     return typeof data?.detail === "string" ? data.detail : fallback;
 }
 
+async function updateCounter() {
+    const link = document.querySelector('nav a[href="iskanja.html"]');
+    const { ok, data } = await api("GET", "/my/searches/count");
+    if (link && ok) {
+        link.textContent = data.count ? `Moja iskanja (${data.count})` : "Moja iskanja";
+    }
+}
+
 async function logout() {
     await api("POST", "/logout");
     location.href = "/";
@@ -66,5 +74,8 @@ const currentUser = api("GET", "/me").then(({ data }) => {
             el("a", { href: "register.html", textContent: "Registracija" }));
     document.getElementById("header").replaceChildren(el("div", { className: "bar" },
         el("a", { className: "logo", href: "/", innerHTML: "Kocki<span>Tsa</span>" }), nav, user));
+    if (data?.role === "buyer") {
+        updateCounter();
+    }
     return data;
 });
