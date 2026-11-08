@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Profil – KockiTsa</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body data-login>
+    <header id="header"></header>
+    <main>
+        <div class="panel">
+            <h2>Profil</h2>
+            <div id="profile"></div>
+        </div>
+    </main>
+    <script src="app.js"></script>
+    <script>
+        const SWITCH = { buyer: ["seller", "prodajalca"], seller: ["buyer", "kupca"] };
+
+        async function switchRole(role) {
+            const { ok, data } = await api("PUT", "/me/role", { role });
+            if (!ok) {
+                return toast(errorText(data, "Vloge ni mogoče zamenjati."), true);
+            }
+            location.reload();
+        }
+
+        currentUser.then((me) => {
+            if (!me) {
+                return;
+            }
+            const [next, label] = SWITCH[me.role] ?? [];
+            document.getElementById("profile").replaceChildren(
+                el("p", {}, el("b", { textContent: "Ime: " }), me.name),
+                el("p", {}, el("b", { textContent: "Trenutna vloga: " }), ROLES[me.role]),
+                ...(next ? [
+                    el("p", { className: "muted", textContent: "Vaši oglasi, rezervacije in iskanja se ob zamenjavi vloge ohranijo." }),
+                    el("button", { className: "btn", textContent: `Zamenjaj vlogo v ${label}`, onclick: () => switchRole(next) }),
+                ] : []));
+        });
+    </script>
+</body>
+</html>
