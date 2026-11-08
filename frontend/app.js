@@ -48,8 +48,13 @@ async function logout() {
 }
 
 const currentUser = api("GET", "/me").then(({ data }) => {
+    const roles = document.body.dataset.role?.split(" ");
     if (!data && "login" in document.body.dataset) {
         location.href = "login.html";
+    }
+    if (data && roles && !roles.includes(data.role)) {
+        location.href = "/";
+        return null;
     }
     const page = location.pathname.split("/").pop() || "index.html";
     const nav = el("nav", {}, ...(data ? MENU[data.role] : []).map(([href, text]) =>
