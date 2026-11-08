@@ -41,6 +41,10 @@ class RejectIn(BaseModel):
     reason: str = Field(min_length=1)
 
 
+class RoleIn(BaseModel):
+    role: Literal["buyer", "seller"]
+
+
 def connect():
     return psycopg.connect(os.environ["DATABASE_URL"], row_factory=dict_row)
 
@@ -98,6 +102,20 @@ def me(request: Request):
     if "user_id" not in request.session:
         return None
     return {"name": request.session["name"], "role": request.session["role"]}
+
+
+@app.put("/me/role")
+def switch_role(data: RoleIn, request: Request):
+    user_id = user(request, "buyer", "seller")
+    with connect() as conn:
+        conn.execute(
+            "UPDATE users "
+            "SET role = %s "
+            "WHERE id = %s",
+            (data.role, user_id),
+        )
+    request.session["role"] = data.role
+    return {"name": request.session["name"], "role": data.role}
 
 
 @app.get("/sets")
