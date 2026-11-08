@@ -43,6 +43,7 @@ main { max-width: 1400px; margin: 0 auto; padding: 16px 20px; display: grid; gap
 .actions { display: flex; gap: 8px; }
 .facts { display: flex; flex-wrap: wrap; gap: 8px 40px; margin: 14px 0 8px; }
 .panel .form { margin-top: 14px; }
+.list { display: grid; gap: 16px; }
 
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 9px 10px; text-align: left; border-bottom: 1px solid var(--line); }

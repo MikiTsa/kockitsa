@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Moja iskanja – KockiTsa</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body data-login data-role="buyer">
+    <header id="header"></header>
+    <main>
+        <div class="panel">
+            <h2>Novo iskanje</h2>
+            <form id="form" class="form">
+                <label>
+                    Komplet iz kataloga *
+                    <input id="set" list="sets" placeholder="številka ali ime kompleta" autocomplete="off" required>
+                </label>
+                <datalist id="sets"></datalist>
+                <div id="chosen" class="chosen" hidden></div>
+                <label>Najvišja cena (€) * <input name="max_price" type="number" step="0.01" min="0.01" required></label>
+                <div>
+                    Sprejemljiva stanja *
+                    <div class="radios">
+                        <label><input name="conditions" type="checkbox" value="sealed"> zapečaten</label>
+                        <label><input name="conditions" type="checkbox" value="new"> nov</label>
+                        <label><input name="conditions" type="checkbox" value="used"> rabljen</label>
+                    </div>
+                </div>
+                <div><button class="btn">Shrani iskanje</button> <small class="muted">* obvezno polje</small></div>
+            </form>
+        </div>
+        <h2 class="title">Aktivna iskanja</h2>
+        <div id="active" class="list"></div>
+    </main>
+    <script src="app.js"></script>
+    <script>
+        const SEARCH_STATUSES = { active: "aktivno", fulfilled: "izpolnjeno" };
+        const input = document.getElementById("set");
+        const chosenBox = document.getElementById("chosen");
+        let sets = [];
+        let chosen = null;
+
+        const fact = (label, value) => el("div", {}, el("b", { textContent: `${label}: ` }), value);
+
+        input.oninput = async () => {
+            chosen = sets.find((s) => `${s.set_number} ${s.name}` === input.value) ?? null;
+            chosenBox.hidden = !chosen;
+            if (chosen) {
+                chosenBox.replaceChildren(el("strong", { textContent: input.value }), el("br"),
+                    el("small", { textContent: `${chosen.theme} · ${chosen.piece_count} kock · ${chosen.release_year}` }));
+                return;
+            }
+            sets = (await api("GET", `/sets?q=${encodeURIComponent(input.value)}`)).data;
+            document.getElementById("sets").replaceChildren(...sets.map((s) => new Option(`${s.set_number} ${s.name}`)));
+        };
+
+        document.getElementById("form").onsubmit = async (event) => {
+            event.preventDefault();
+            if (!chosen) {
+                return toast("Izberite komplet iz kataloga.", true);
+            }
+            const form = new FormData(event.target);
+            const conditions = form.getAll("conditions");
+            if (!conditions.length) {
+                return toast("Izberite vsaj eno sprejemljivo stanje.", true);
+            }
+            const { ok, data } = await api("POST", "/searches", { set_id: chosen.id, max_price: form.get("max_price"), conditions });
+            if (!ok) {
+                return toast(errorText(data, "Preverite vnesene podatke."), true);
+            }
+            event.target.reset();
+            chosen = null;
+            chosenBox.hidden = true;
+            toast("Iskanje je shranjeno.");
+            load();
+        };
+
+        function card(s) {
+            return el("div", { className: "panel" },
+                el("div", { className: "head" }, el("strong", { textContent: `${s.set_number} ${s.set_name}` })),
+                el("div", { className: "facts" },
+                    fact("Najvišja cena", eur.format(s.max_price)),
+                    fact("Sprejemljiva stanja", s.conditions.map((c) => CONDITIONS[c]).join(", ")),
+                    fact("Status", SEARCH_STATUSES[s.status])));
+        }
+
+        async function load() {
+            const { ok, data } = await api("GET", "/my/searches");
+            if (!ok) {
+                return toast(errorText(data, "Iskanj ni mogoče naložiti."), true);
+            }
+            document.getElementById("active").replaceChildren(...(data.length
+                ? data.map(card)
+                : [el("p", { className: "muted", textContent: "Nimate aktivnih iskanj." })]));
+        }
+
+        currentUser.then((me) => me && load());
+    </script>
+</body>
+</html>
