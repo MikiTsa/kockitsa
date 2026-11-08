@@ -33,6 +33,8 @@
         </div>
         <h2 class="title">Aktivna iskanja</h2>
         <div id="active" class="list"></div>
+        <h2 class="title">Izpolnjena iskanja</h2>
+        <div id="fulfilled" class="list"></div>
     </main>
     <script src="app.js"></script>
     <script>
@@ -111,14 +113,28 @@
             load();
         };
 
+        async function remove(id) {
+            const { ok, data } = await api("DELETE", `/searches/${id}`);
+            toast(ok ? "Iskanje je izbrisano." : errorText(data, "Iskanja ni mogoče izbrisati."), !ok);
+            load();
+        }
+
         function card(s) {
+            const active = s.status === "active";
             return el("div", { className: "panel" },
-                el("div", { className: "head" }, el("strong", { textContent: `${s.set_number} ${s.set_name}` })),
+                el("div", { className: "head" }, el("strong", { textContent: `${s.set_number} ${s.set_name}` }),
+                    active ? el("button", { className: "btn ghost", textContent: "Izbriši iskanje", onclick: () => remove(s.id) }) : ""),
                 el("div", { className: "facts" },
                     fact("Najvišja cena", eur.format(s.max_price)),
                     fact("Sprejemljiva stanja", s.conditions.map((c) => CONDITIONS[c]).join(", ")),
                     fact("Status", SEARCH_STATUSES[s.status])),
-                matches(s));
+                active ? matches(s) : "");
+        }
+
+        function fill(id, searches, empty) {
+            document.getElementById(id).replaceChildren(...(searches.length
+                ? searches.map(card)
+                : [el("p", { className: "muted", textContent: empty })]));
         }
 
         async function load() {
@@ -126,9 +142,8 @@
             if (!ok) {
                 return toast(errorText(data, "Iskanj ni mogoče naložiti."), true);
             }
-            document.getElementById("active").replaceChildren(...(data.length
-                ? data.map(card)
-                : [el("p", { className: "muted", textContent: "Nimate aktivnih iskanj." })]));
+            fill("active", data.filter((s) => s.status === "active"), "Nimate aktivnih iskanj.");
+            fill("fulfilled", data.filter((s) => s.status === "fulfilled"), "Nimate izpolnjenih iskanj.");
             updateCounter();
         }
 
