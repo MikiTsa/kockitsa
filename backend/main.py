@@ -51,6 +51,14 @@ class SearchIn(BaseModel):
     conditions: list[Literal["sealed", "new", "used"]] = Field(min_length=1)
 
 
+MATCHES = (
+    "FROM listings l "
+    "JOIN users u ON u.id = l.seller_id "
+    "WHERE se.status = 'active' AND l.set_id = se.set_id AND l.status = 'approved' AND l.price <= se.max_price "
+    "AND l.condition = ANY (se.conditions) AND l.seller_id <> se.buyer_id"
+)
+
+
 def connect():
     return psycopg.connect(os.environ["DATABASE_URL"], row_factory=dict_row)
 
@@ -245,12 +253,22 @@ def reserve(listing_id: int, request: Request):
 @app.post("/listings/{listing_id}/sell")
 def sell(listing_id: int, request: Request):
     seller_id = user(request, "seller")
-    change(
-        "UPDATE listings "
-        "SET status = 'sold' "
-        "WHERE id = %s AND seller_id = %s AND status = 'reserved'",
-        (listing_id, seller_id),
-    )
+    with connect() as conn:
+        listing = conn.execute(
+            "UPDATE listings "
+            "SET status = 'sold' "
+            "WHERE id = %s AND seller_id = %s AND status = 'reserved' "
+            "RETURNING buyer_id, set_id",
+            (listing_id, seller_id),
+        ).fetchone()
+        if not listing:
+            raise HTTPException(409, "Oglas ne obstaja ali dejanje ni dovoljeno")
+        conn.execute(
+            "UPDATE searches "
+            "SET status = 'fulfilled' "
+            "WHERE buyer_id = %s AND set_id = %s AND status = 'active'",
+            (listing["buyer_id"], listing["set_id"]),
+        )
 
 
 @app.post("/listings/{listing_id}/release")
@@ -286,13 +304,40 @@ def my_searches(request: Request):
     buyer_id = user(request, "buyer")
     with connect() as conn:
         return conn.execute(
-            "SELECT se.id, s.set_number, s.name AS set_name, se.max_price, se.conditions, se.status "
+            "SELECT se.id, s.set_number, s.name AS set_name, se.max_price, se.conditions, se.status, "
+            "COALESCE((SELECT json_agg(json_build_object("
+            "'id', l.id, 'condition', l.condition, 'price', l.price, 'seller_name', u.name"
+            ") ORDER BY l.price) " + MATCHES + "), '[]') AS matches "
             "FROM searches se "
             "JOIN sets s ON s.id = se.set_id "
-            "WHERE se.buyer_id = %s AND se.status = 'active' "
+            "WHERE se.buyer_id = %s "
             "ORDER BY se.created_at DESC",
             (buyer_id,),
         ).fetchall()
+
+
+@app.delete("/searches/{search_id}")
+def delete_search(search_id: int, request: Request):
+    buyer_id = user(request, "buyer")
+    with connect() as conn:
+        if conn.execute(
+            "DELETE FROM searches "
+            "WHERE id = %s AND buyer_id = %s AND status = 'active'",
+            (search_id, buyer_id),
+        ).rowcount == 0:
+            raise HTTPException(404, "Aktivno iskanje ne obstaja")
+
+
+@app.get("/my/searches/count")
+def matched_searches(request: Request):
+    buyer_id = user(request, "buyer")
+    with connect() as conn:
+        return conn.execute(
+            "SELECT count(*) "
+            "FROM searches se "
+            "WHERE se.buyer_id = %s AND se.status = 'active' AND EXISTS (SELECT 1 " + MATCHES + ")",
+            (buyer_id,),
+        ).fetchone()
 
 
 # keep mount last
