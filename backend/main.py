@@ -281,5 +281,19 @@ def create_search(search: SearchIn, request: Request):
         raise HTTPException(404, "Komplet ni v katalogu")
 
 
+@app.get("/my/searches")
+def my_searches(request: Request):
+    buyer_id = user(request, "buyer")
+    with connect() as conn:
+        return conn.execute(
+            "SELECT se.id, s.set_number, s.name AS set_name, se.max_price, se.conditions, se.status "
+            "FROM searches se "
+            "JOIN sets s ON s.id = se.set_id "
+            "WHERE se.buyer_id = %s AND se.status = 'active' "
+            "ORDER BY se.created_at DESC",
+            (buyer_id,),
+        ).fetchall()
+
+
 # keep mount last
 app.mount("/", StaticFiles(directory=Path(__file__).parent.parent / "frontend", html=True), name="frontend")
