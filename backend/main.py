@@ -51,6 +51,14 @@ class SearchIn(BaseModel):
     conditions: list[Literal["sealed", "new", "used"]] = Field(min_length=1)
 
 
+MATCHES = (
+    "FROM listings l "
+    "JOIN users u ON u.id = l.seller_id "
+    "WHERE l.set_id = se.set_id AND l.status = 'approved' AND l.price <= se.max_price "
+    "AND l.condition = ANY (se.conditions) AND l.seller_id <> se.buyer_id"
+)
+
+
 def connect():
     return psycopg.connect(os.environ["DATABASE_URL"], row_factory=dict_row)
 
@@ -286,13 +294,28 @@ def my_searches(request: Request):
     buyer_id = user(request, "buyer")
     with connect() as conn:
         return conn.execute(
-            "SELECT se.id, s.set_number, s.name AS set_name, se.max_price, se.conditions, se.status "
+            "SELECT se.id, s.set_number, s.name AS set_name, se.max_price, se.conditions, se.status, "
+            "COALESCE((SELECT json_agg(json_build_object("
+            "'id', l.id, 'condition', l.condition, 'price', l.price, 'seller_name', u.name"
+            ") ORDER BY l.price) " + MATCHES + "), '[]') AS matches "
             "FROM searches se "
             "JOIN sets s ON s.id = se.set_id "
             "WHERE se.buyer_id = %s AND se.status = 'active' "
             "ORDER BY se.created_at DESC",
             (buyer_id,),
         ).fetchall()
+
+
+@app.get("/my/searches/count")
+def matched_searches(request: Request):
+    buyer_id = user(request, "buyer")
+    with connect() as conn:
+        return conn.execute(
+            "SELECT count(*) "
+            "FROM searches se "
+            "WHERE se.buyer_id = %s AND se.status = 'active' AND EXISTS (SELECT 1 " + MATCHES + ")",
+            (buyer_id,),
+        ).fetchone()
 
 
 # keep mount last
