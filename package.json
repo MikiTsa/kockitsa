@@ -1,0 +1,28 @@
+{
+  "name": "kockitsa",
+  "version": "1.0.0",
+  "description": "KockiTsa je spletna tržnica, na kateri posamezniki prodajajo in kupujejo nove in rabljene LEGO komplete. Vsak oglas je vezan na komplet iz kataloga in ga pred objavo pregleda administrator. Kupec objavljen oglas rezervira, prodajalec po prevzemu potrdi prodajo. Kupec lahko shrani iskanje kompleta z najvišjo ceno in sprejemljivimi stanji, rešitev pa mu pokaže oglase, ki iskanju ustrezajo.",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "lint": "eslint frontend"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/barbulovics1/kockitsa.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/barbulovics1/kockitsa/issues"
+  },
+  "homepage": "https://github.com/barbulovics1/kockitsa#readme",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.15.0",
+    "globals": "^17.14.0"
+  }
+}
